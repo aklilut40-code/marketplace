@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { useToast } from '../context/ToastContext';
+import { useToast } from '../context/useToast';
 import * as orderApi from '../api/orderApi';
 import { resolveImageUrl } from '../api/client';
 import {

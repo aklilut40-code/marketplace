@@ -4,7 +4,7 @@ import * as productApi from '../api/productApi';
 import * as reviewApi from '../api/reviewApi';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { useToast } from '../context/ToastContext';
+import { useToast } from '../context/useToast';
 import { resolveImageUrl } from '../api/client';
 import {
   Star,

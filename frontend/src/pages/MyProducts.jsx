@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import * as productApi from '../api/productApi';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { resolveImageUrl } from '../api/client';
 import {
   Plus,
@@ -12,14 +13,17 @@ import {
   CheckCircle,
   AlertCircle,
   X,
+  Layers,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 
 const MyProducts = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -34,6 +38,7 @@ const MyProducts = () => {
     quantity: '',
   });
   const [imageFile, setImageFile] = useState(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   const fetchMyProducts = useCallback(async () => {
@@ -65,6 +70,13 @@ const MyProducts = () => {
     fetchMyProducts();
   }, [fetchMyProducts]);
 
+  const stats = useMemo(() => {
+    const total = products.length;
+    const inStock = products.filter((p) => p.quantity > 0).length;
+    const outOfStock = products.filter((p) => p.quantity === 0).length;
+    return { total, inStock, outOfStock };
+  }, [products]);
+
   const openCreateModal = () => {
     setFormData({ name: '', description: '', price: '', quantity: '' });
     setIsCreateModalOpen(true);
@@ -94,32 +106,47 @@ const MyProducts = () => {
       if (editingProduct) {
         const updated = await productApi.updateProduct(editingProduct._id, payload);
         setProducts(products.map((p) => (p._id === updated._id ? updated : p)));
-        setSuccessMsg('Product updated successfully!');
+        toast.success(`Product "${updated.name}" updated successfully!`);
       } else {
         const created = await productApi.createProduct(payload);
         setProducts([created, ...products]);
-        setSuccessMsg('Product created successfully!');
+        toast.success(`Product "${created.name}" created successfully!`);
       }
 
       setIsCreateModalOpen(false);
       setEditingProduct(null);
-      setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
-      alert(err.message || 'Error saving product');
+      toast.error(err.message || 'Error saving product');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (productId) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) return;
+  const handleDelete = async (productId, productName) => {
+    if (!window.confirm(`Are you sure you want to delete "${productName}"?`)) return;
     try {
       await productApi.deleteProduct(productId);
       setProducts(products.filter((p) => p._id !== productId));
-      setSuccessMsg('Product deleted successfully');
-      setTimeout(() => setSuccessMsg(''), 3000);
+      toast.info(`Deleted product "${productName}"`);
     } catch (err) {
-      alert(err.message || 'Failed to delete product');
+      toast.error(err.message || 'Failed to delete product');
+    }
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      setImagePreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleCloseUploadModal = () => {
+    setUploadingForProduct(null);
+    setImageFile(null);
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+      setImagePreviewUrl(null);
     }
   };
 
@@ -134,12 +161,10 @@ const MyProducts = () => {
         imageFile
       );
       setProducts(products.map((p) => (p._id === updated._id ? updated : p)));
-      setUploadingForProduct(null);
-      setImageFile(null);
-      setSuccessMsg('Image uploaded and attached successfully!');
-      setTimeout(() => setSuccessMsg(''), 3000);
+      toast.success(`Image uploaded and added to "${uploadingForProduct.name}"!`);
+      handleCloseUploadModal();
     } catch (err) {
-      alert(err.message || 'Image upload failed');
+      toast.error(err.message || 'Image upload failed');
     } finally {
       setSubmitting(false);
     }
@@ -149,24 +174,50 @@ const MyProducts = () => {
     <div className="page-container">
       <div className="page-header-row">
         <div>
-          <h1 className="page-heading">Seller Inventory & Products</h1>
+          <h1 className="page-heading">Seller Inventory & Catalog</h1>
           <p className="text-muted">
-            Create, update pricing and inventory, and upload product images.
+            Manage your store's listings, adjust real-time stock levels, and upload imagery.
           </p>
         </div>
 
-        <button onClick={openCreateModal} className="btn btn-primary">
+        <button onClick={openCreateModal} className="btn btn-primary btn-glow">
           <Plus size={18} />
-          <span>Add New Product</span>
+          <span>New Product</span>
         </button>
       </div>
 
-      {successMsg && (
-        <div className="alert alert-success">
-          <CheckCircle size={18} />
-          <span>{successMsg}</span>
+      {/* Stats Cards */}
+      <div className="seller-stats-grid">
+        <div className="seller-stat-card glass-panel">
+          <div className="stat-icon-circle blue">
+            <Layers size={20} />
+          </div>
+          <div>
+            <div className="stat-value">{stats.total}</div>
+            <div className="stat-label">Total Listings</div>
+          </div>
         </div>
-      )}
+
+        <div className="seller-stat-card glass-panel">
+          <div className="stat-icon-circle green">
+            <CheckCircle2 size={20} />
+          </div>
+          <div>
+            <div className="stat-value">{stats.inStock}</div>
+            <div className="stat-label">Active In Stock</div>
+          </div>
+        </div>
+
+        <div className="seller-stat-card glass-panel">
+          <div className="stat-icon-circle amber">
+            <AlertTriangle size={20} />
+          </div>
+          <div>
+            <div className="stat-value">{stats.outOfStock}</div>
+            <div className="stat-label">Out of Stock</div>
+          </div>
+        </div>
+      </div>
 
       {error && (
         <div className="alert alert-error">
@@ -178,26 +229,26 @@ const MyProducts = () => {
       {loading ? (
         <div className="flex-center page-loading">
           <div className="spinner"></div>
-          <p>Loading your products...</p>
+          <p>Loading your catalog...</p>
         </div>
       ) : products.length === 0 ? (
-        <div className="empty-state">
+        <div className="empty-state glass-panel">
           <Package size={52} className="empty-icon" />
-          <h3>No Products Listed</h3>
-          <p>Start selling by adding your first product catalog listing today.</p>
-          <button onClick={openCreateModal} className="btn btn-primary">
+          <h3>No Products Listed Yet</h3>
+          <p>Kickstart your store by listing your first product with prices and stock count.</p>
+          <button onClick={openCreateModal} className="btn btn-primary btn-glow">
             <Plus size={18} />
-            <span>Create Your First Product</span>
+            <span>Create First Product</span>
           </button>
         </div>
       ) : (
-        <div className="table-card">
+        <div className="table-card glass-panel">
           <table className="inventory-table">
             <thead>
               <tr>
                 <th>Product</th>
                 <th>Price</th>
-                <th>Stock</th>
+                <th>Stock Status</th>
                 <th>Images</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
@@ -207,7 +258,7 @@ const MyProducts = () => {
                 const thumb = p.images && p.images.length > 0 ? p.images[0] : null;
 
                 return (
-                  <tr key={p._id}>
+                  <tr key={p._id} className="inventory-row">
                     <td>
                       <div className="table-product-cell">
                         <div className="table-thumb">
@@ -235,26 +286,27 @@ const MyProducts = () => {
                         </div>
                       </div>
                     </td>
-                    <td>${Number(p.price).toFixed(2)}</td>
+                    <td className="price-td">${Number(p.price).toFixed(2)}</td>
                     <td>
                       <span
                         className={`badge ${
                           p.quantity > 0 ? 'badge-stock' : 'badge-out-of-stock'
                         }`}
                       >
+                        <span className="pulsing-dot" />
                         {p.quantity} units
                       </span>
                     </td>
                     <td>
                       <div className="image-count-cell">
-                        <span>{p.images?.length || 0} image(s)</span>
+                        <span className="image-counter-tag">{p.images?.length || 0}</span>
                         <button
                           onClick={() => setUploadingForProduct(p)}
-                          className="btn btn-outline btn-xs"
+                          className="btn btn-secondary btn-xs"
                           title="Upload Image"
                         >
-                          <Upload size={14} />
-                          <span>Upload</span>
+                          <Upload size={13} />
+                          <span>Add Photo</span>
                         </button>
                       </div>
                     </td>
@@ -268,7 +320,7 @@ const MyProducts = () => {
                           <Edit2 size={16} />
                         </button>
                         <button
-                          onClick={() => handleDelete(p._id)}
+                          onClick={() => handleDelete(p._id, p.name)}
                           className="btn-icon btn-icon-danger"
                           title="Delete Product"
                         >
@@ -287,7 +339,7 @@ const MyProducts = () => {
       {/* Modal: Create / Edit Product */}
       {(isCreateModalOpen || editingProduct) && (
         <div className="modal-backdrop">
-          <div className="modal-dialog">
+          <div className="modal-dialog glass-panel animate-scale-up">
             <div className="modal-header">
               <h3>{editingProduct ? 'Edit Product' : 'Create New Product'}</h3>
               <button
@@ -303,7 +355,7 @@ const MyProducts = () => {
 
             <form onSubmit={handleSaveProduct} className="modal-form">
               <div className="form-group">
-                <label>Product Name *</label>
+                <label>Product Title *</label>
                 <input
                   type="text"
                   required
@@ -312,7 +364,7 @@ const MyProducts = () => {
                     setFormData({ ...formData, name: e.target.value })
                   }
                   className="form-input"
-                  placeholder="e.g. Ergonomic Keyboard"
+                  placeholder="e.g. Ergonomic Mechanical Keyboard"
                 />
               </div>
 
@@ -325,7 +377,7 @@ const MyProducts = () => {
                     setFormData({ ...formData, description: e.target.value })
                   }
                   className="form-input"
-                  placeholder="Key features and details..."
+                  placeholder="Describe key features, materials, and details..."
                 />
               </div>
 
@@ -347,7 +399,7 @@ const MyProducts = () => {
                 </div>
 
                 <div className="form-group">
-                  <label>Quantity In Stock *</label>
+                  <label>Initial Stock (Units) *</label>
                   <input
                     type="number"
                     min="0"
@@ -357,7 +409,7 @@ const MyProducts = () => {
                       setFormData({ ...formData, quantity: e.target.value })
                     }
                     className="form-input"
-                    placeholder="20"
+                    placeholder="25"
                   />
                 </div>
               </div>
@@ -376,7 +428,7 @@ const MyProducts = () => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="btn btn-primary"
+                  className="btn btn-primary btn-glow"
                 >
                   {submitting ? 'Saving...' : editingProduct ? 'Save Changes' : 'Create Product'}
                 </button>
@@ -386,17 +438,14 @@ const MyProducts = () => {
         </div>
       )}
 
-      {/* Modal: Upload Image */}
+      {/* Modal: Upload Image with Live Preview */}
       {uploadingForProduct && (
         <div className="modal-backdrop">
-          <div className="modal-dialog">
+          <div className="modal-dialog glass-panel animate-scale-up">
             <div className="modal-header">
-              <h3>Upload Product Image</h3>
+              <h3>Upload Product Photo</h3>
               <button
-                onClick={() => {
-                  setUploadingForProduct(null);
-                  setImageFile(null);
-                }}
+                onClick={handleCloseUploadModal}
                 className="btn-icon"
               >
                 <X size={20} />
@@ -404,36 +453,54 @@ const MyProducts = () => {
             </div>
 
             <form onSubmit={handleUploadImage} className="modal-form">
-              <p className="text-muted">
+              <p className="text-muted" style={{ marginBottom: '1rem' }}>
                 Uploading to: <strong>{uploadingForProduct.name}</strong>
               </p>
 
-              <div className="file-upload-box">
-                <input
-                  type="file"
-                  id="image-file-input"
-                  accept="image/jpeg,image/png,image/webp"
-                  required
-                  onChange={(e) => setImageFile(e.target.files[0])}
-                  className="file-input-hidden"
-                />
-                <label htmlFor="image-file-input" className="file-upload-label">
-                  <Upload size={32} />
-                  <span>
-                    {imageFile
-                      ? `Selected: ${imageFile.name}`
-                      : 'Choose JPEG, PNG, or WEBP image (max 5MB)'}
-                  </span>
-                </label>
-              </div>
+              {imagePreviewUrl ? (
+                <div className="image-preview-container">
+                  <img
+                    src={imagePreviewUrl}
+                    alt="Preview"
+                    className="image-live-preview"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setImageFile(null);
+                      setImagePreviewUrl(null);
+                    }}
+                    className="btn btn-secondary btn-xs mt-2"
+                  >
+                    Choose Different Image
+                  </button>
+                </div>
+              ) : (
+                <div className="file-upload-box">
+                  <input
+                    type="file"
+                    id="image-file-input"
+                    accept="image/jpeg,image/png,image/webp"
+                    required
+                    onChange={handleFileChange}
+                    className="file-input-hidden"
+                  />
+                  <label htmlFor="image-file-input" className="file-upload-label">
+                    <div className="upload-icon-pulse">
+                      <Upload size={32} />
+                    </div>
+                    <strong>Click to upload an image</strong>
+                    <span className="text-muted text-xs">
+                      Supported: JPEG, PNG, WEBP (Maximum 5MB)
+                    </span>
+                  </label>
+                </div>
+              )}
 
               <div className="modal-footer">
                 <button
                   type="button"
-                  onClick={() => {
-                    setUploadingForProduct(null);
-                    setImageFile(null);
-                  }}
+                  onClick={handleCloseUploadModal}
                   className="btn btn-secondary"
                 >
                   Cancel
@@ -441,9 +508,9 @@ const MyProducts = () => {
                 <button
                   type="submit"
                   disabled={!imageFile || submitting}
-                  className="btn btn-primary"
+                  className="btn btn-primary btn-glow"
                 >
-                  {submitting ? 'Uploading...' : 'Upload Image'}
+                  {submitting ? 'Uploading...' : 'Confirm & Upload'}
                 </button>
               </div>
             </form>
@@ -455,4 +522,3 @@ const MyProducts = () => {
 };
 
 export default MyProducts;
-

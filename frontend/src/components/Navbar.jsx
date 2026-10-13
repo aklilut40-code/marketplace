@@ -1,118 +1,81 @@
 import React from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { useToast } from '../context/useToast';
-import {
-  ShoppingBag,
-  ShoppingCart,
-  Package,
-  Compass,
-  LogOut,
-  LogIn,
-  UserPlus,
-  Store,
-  Sparkles,
-} from 'lucide-react';
+import { ShoppingBag, ShoppingCart, Package, Tag, LogOut, LogIn, UserPlus, Store } from 'lucide-react';
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { itemCount } = useCart();
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
-    toast.info('You have logged out.');
     navigate('/');
   };
 
   const isSellerOrAdmin = user?.role === 'seller' || user?.role === 'admin';
 
   return (
-    <header className="navbar-header glass-header">
+    <header className="navbar-header">
       <div className="navbar-container">
         <Link to="/" className="navbar-brand">
-          <div className="brand-icon-wrapper">
-            <ShoppingBag className="brand-icon" size={20} />
-          </div>
-          <span className="brand-text">MarketPulse</span>
+          <ShoppingBag className="brand-icon" />
+          <span>MarketPulse</span>
         </Link>
 
         <nav className="navbar-nav">
-          <NavLink
-            to="/"
-            end
-            className={({ isActive }) => `nav-link ${isActive ? 'nav-active' : ''}`}
-          >
-            <Compass size={17} />
-            <span>Discover</span>
-          </NavLink>
+          <Link to="/" className="nav-link">
+            <Tag size={18} />
+            <span>Explore</span>
+          </Link>
 
           {isSellerOrAdmin && (
-            <NavLink
-              to="/my-products"
-              className={({ isActive }) => `nav-link ${isActive ? 'nav-active' : ''}`}
-            >
-              <Store size={17} />
-              <span>Seller Hub</span>
-            </NavLink>
+            <Link to="/my-products" className="nav-link">
+              <Store size={18} />
+              <span>My Products</span>
+            </Link>
           )}
 
           {isAuthenticated && (
-            <NavLink
-              to="/orders"
-              className={({ isActive }) => `nav-link ${isActive ? 'nav-active' : ''}`}
-            >
-              <Package size={17} />
+            <Link to="/orders" className="nav-link">
+              <Package size={18} />
               <span>Orders</span>
-            </NavLink>
+            </Link>
           )}
 
-          <NavLink
-            to="/cart"
-            className={({ isActive }) =>
-              `nav-link cart-nav-link ${isActive ? 'nav-active' : ''}`
-            }
-          >
-            <ShoppingCart size={17} />
+          <Link to="/cart" className="nav-link cart-nav-link">
+            <ShoppingCart size={18} />
             <span>Cart</span>
-            {itemCount > 0 && (
-              <span className="cart-badge animate-pulse-badge">{itemCount}</span>
-            )}
-          </NavLink>
+            {itemCount > 0 && <span className="cart-badge">{itemCount}</span>}
+          </Link>
         </nav>
 
         <div className="navbar-auth">
           {isAuthenticated ? (
             <div className="user-profile-menu">
-              <div className="user-avatar-badge">
-                <span className="user-avatar-initial">
-                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
-                </span>
-                <div className="user-meta-info">
-                  <span className="user-name">{user.name}</span>
-                  <span className={`role-tag role-${user.role}`}>{user.role}</span>
-                </div>
+              <div className="user-meta">
+                <span className="user-name">{user.name}</span>
+                <span className={`badge badge-${user.role}`}>{user.role}</span>
               </div>
               <button
                 onClick={handleLogout}
-                className="btn btn-ghost btn-sm"
+                className="btn btn-secondary btn-sm"
                 title="Log Out"
               >
                 <LogOut size={16} />
-                <span className="hide-on-mobile">Logout</span>
+                <span>Logout</span>
               </button>
             </div>
           ) : (
             <div className="auth-buttons">
-              <Link to="/login" className="btn btn-ghost btn-sm">
-                <LogIn size={15} />
+              <Link to="/login" className="btn btn-outline btn-sm">
+                <LogIn size={16} />
                 <span>Login</span>
               </Link>
-              <Link to="/register" className="btn btn-primary btn-sm btn-glow">
-                <Sparkles size={14} />
-                <span>Get Started</span>
+              <Link to="/register" className="btn btn-primary btn-sm">
+                <UserPlus size={16} />
+                <span>Register</span>
               </Link>
             </div>
           )}
@@ -123,3 +86,4 @@ const Navbar = () => {
 };
 
 export default Navbar;
+

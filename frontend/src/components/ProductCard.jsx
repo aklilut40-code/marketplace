@@ -2,17 +2,16 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/useToast';
 import { resolveImageUrl } from '../api/client';
-import { ShoppingCart, Check, Eye } from 'lucide-react';
+import { ShoppingCart, Check, AlertCircle } from 'lucide-react';
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
-  const { toast } = useToast();
   const navigate = useNavigate();
   const [adding, setAdding] = useState(false);
   const [added, setAdded] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const primaryImage =
     product.images && product.images.length > 0 ? product.images[0] : null;
@@ -22,7 +21,6 @@ const ProductCard = ({ product }) => {
     e.stopPropagation();
 
     if (!isAuthenticated) {
-      toast.info('Please log in to add items to your cart');
       navigate('/login');
       return;
     }
@@ -31,12 +29,13 @@ const ProductCard = ({ product }) => {
 
     try {
       setAdding(true);
+      setErrorMsg('');
       await addToCart(product._id, 1);
       setAdded(true);
-      toast.success(`Added "${product.name}" to your cart!`);
-      setTimeout(() => setAdded(false), 2000);
+      setTimeout(() => setAdded(false), 1800);
     } catch (err) {
-      toast.error(err.message || 'Failed to add item to cart');
+      setErrorMsg(err.message || 'Failed to add to cart');
+      setTimeout(() => setErrorMsg(''), 3000);
     } finally {
       setAdding(false);
     }
@@ -45,7 +44,7 @@ const ProductCard = ({ product }) => {
   const isOutOfStock = product.quantity <= 0;
 
   return (
-    <div className="product-card group">
+    <div className="product-card">
       <Link to={`/products/${product._id}`} className="product-card-image-link">
         {primaryImage ? (
           <img
@@ -63,33 +62,22 @@ const ProductCard = ({ product }) => {
             <span>No Image Available</span>
           </div>
         )}
-
-        {/* Floating Category Pill */}
-        {product.category && (
-          <span className="glass-pill top-left">
-            {typeof product.category === 'object'
-              ? product.category.name
-              : 'Product'}
-          </span>
+        {isOutOfStock ? (
+          <span className="badge badge-out-of-stock">Out of Stock</span>
+        ) : (
+          <span className="badge badge-stock">{product.quantity} left</span>
         )}
-
-        {/* Stock Status Indicator */}
-        <div className={`stock-status-pill ${isOutOfStock ? 'out-of-stock' : 'in-stock'}`}>
-          <span className="pulsing-dot" />
-          <span>{isOutOfStock ? 'Sold Out' : `${product.quantity} in stock`}</span>
-        </div>
-
-        {/* Hover Quick View Button */}
-        <div className="card-quick-overlay">
-          <span className="btn btn-xs btn-glass">
-            <Eye size={14} />
-            <span>Quick View</span>
-          </span>
-        </div>
       </Link>
 
       <div className="product-card-body">
         <div className="product-card-header">
+          {product.category && (
+            <span className="product-category">
+              {typeof product.category === 'object'
+                ? product.category.name
+                : 'Category'}
+            </span>
+          )}
           {product.seller && (
             <span className="product-seller">
               by {typeof product.seller === 'object' ? product.seller.name : 'Seller'}
@@ -102,40 +90,43 @@ const ProductCard = ({ product }) => {
         </Link>
 
         <p className="product-card-description">
-          {product.description || 'Crafted with premium quality and precision.'}
+          {product.description || 'No description provided.'}
         </p>
 
         <div className="product-card-footer">
-          <div className="price-container">
-            <span className="price-currency">$</span>
-            <span className="product-price">{Number(product.price).toFixed(2)}</span>
-          </div>
+          <div className="product-price">${Number(product.price).toFixed(2)}</div>
 
           <button
             onClick={handleAddToCart}
             disabled={isOutOfStock || adding}
-            className={`btn btn-sm btn-interactive-cart ${
+            className={`btn btn-sm ${
               added ? 'btn-success' : isOutOfStock ? 'btn-disabled' : 'btn-primary'
             }`}
           >
             {added ? (
               <>
-                <Check size={16} className="animate-scale" />
-                <span>Added!</span>
+                <Check size={16} />
+                <span>Added</span>
               </>
-            ) : adding ? (
-              <span className="spinner-sm" />
             ) : (
               <>
                 <ShoppingCart size={16} />
-                <span>{isOutOfStock ? 'Unavailable' : 'Add to Cart'}</span>
+                <span>{isOutOfStock ? 'Sold Out' : 'Add to Cart'}</span>
               </>
             )}
           </button>
         </div>
+
+        {errorMsg && (
+          <div className="product-card-error">
+            <AlertCircle size={14} />
+            <span>{errorMsg}</span>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 export default ProductCard;
+

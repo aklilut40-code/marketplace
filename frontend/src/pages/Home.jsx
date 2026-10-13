@@ -1,18 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import * as productApi from '../api/productApi';
 import ProductCard from '../components/ProductCard';
-import {
-  Search,
-  PackageX,
-  Sparkles,
-  ArrowUpDown,
-  Filter,
-  CheckCircle2,
-  X,
-  Shield,
-  Zap,
-  TrendingUp,
-} from 'lucide-react';
+import { Search, SlidersHorizontal, PackageX, Sparkles } from 'lucide-react';
 
 const Home = () => {
   const [products, setProducts] = useState([]);
@@ -21,8 +10,6 @@ const Home = () => {
   const [search, setSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState('');
   const [categories, setCategories] = useState([]);
-  const [sortBy, setSortBy] = useState('featured');
-  const [inStockOnly, setInStockOnly] = useState(false);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -35,7 +22,7 @@ const Home = () => {
       const data = await productApi.getProducts(params);
       setProducts(data);
 
-      // Extract unique categories from products
+      // Extract unique categories from products if not already loaded
       const catsMap = new Map();
       data.forEach((p) => {
         if (p.category && typeof p.category === 'object' && p.category._id) {
@@ -43,9 +30,7 @@ const Home = () => {
         }
       });
       if (catsMap.size > 0 && categories.length === 0) {
-        setCategories(
-          Array.from(catsMap.entries()).map(([id, name]) => ({ id, name }))
-        );
+        setCategories(Array.from(catsMap.entries()).map(([id, name]) => ({ id, name })));
       }
     } catch (err) {
       setError(err.message || 'Failed to fetch products');
@@ -63,43 +48,19 @@ const Home = () => {
     fetchProducts();
   };
 
-  const handleClearSearch = () => {
-    setSearch('');
-  };
-
-  // Filter & Sort client-side
-  const filteredAndSortedProducts = useMemo(() => {
-    let result = [...products];
-
-    if (inStockOnly) {
-      result = result.filter((p) => p.quantity > 0);
-    }
-
-    if (sortBy === 'price-low') {
-      result.sort((a, b) => a.price - b.price);
-    } else if (sortBy === 'price-high') {
-      result.sort((a, b) => b.price - a.price);
-    } else if (sortBy === 'name') {
-      result.sort((a, b) => a.name.localeCompare(b.name));
-    }
-
-    return result;
-  }, [products, inStockOnly, sortBy]);
-
   return (
     <div className="page-container">
-      {/* Modern Interactive Hero */}
-      <section className="hero-banner modern-hero">
+      <section className="hero-banner">
         <div className="hero-content">
           <div className="hero-tag">
-            <Sparkles size={15} />
-            <span>Curated Independent Market</span>
+            <Sparkles size={16} />
+            <span>Discover Handcrafted & Verified Products</span>
           </div>
           <h1 className="hero-title">
-            Discover Quality Craftsmanship & Extraordinary Finds
+            The Modern Marketplace for Creators & Shoppers
           </h1>
           <p className="hero-subtitle">
-            Support passionate creators, shop authentic pieces, and experience frictionless commerce.
+            Explore curated collections from verified independent sellers worldwide.
           </p>
 
           <form onSubmit={handleSearchSubmit} className="hero-search-form">
@@ -107,128 +68,56 @@ const Home = () => {
               <Search className="search-icon" size={20} />
               <input
                 type="text"
-                placeholder="Search products by title, keyword, or description..."
+                placeholder="Search products by title or keywords..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="search-input"
               />
-              {search && (
-                <button
-                  type="button"
-                  onClick={handleClearSearch}
-                  className="search-clear-btn"
-                  title="Clear search"
-                >
-                  <X size={16} />
-                </button>
-              )}
             </div>
-            <button type="submit" className="btn btn-primary btn-lg btn-glow">
-              Explore
+            <button type="submit" className="btn btn-primary btn-lg">
+              Search
             </button>
           </form>
-
-          {/* Interactive Feature Highlights */}
-          <div className="hero-highlights">
-            <div className="highlight-pill">
-              <Shield size={14} className="highlight-icon" />
-              <span>Buyer Protection</span>
-            </div>
-            <div className="highlight-pill">
-              <Zap size={14} className="highlight-icon" />
-              <span>Direct-from-Seller</span>
-            </div>
-            <div className="highlight-pill">
-              <TrendingUp size={14} className="highlight-icon" />
-              <span>Verified Reviews</span>
-            </div>
-          </div>
         </div>
       </section>
 
-      {/* Interactive Category Filter Bar */}
+      {/* Categories Filter Tabs */}
       {categories.length > 0 && (
         <div className="category-filter-bar">
           <button
             onClick={() => setActiveCategory('')}
             className={`category-pill ${activeCategory === '' ? 'active' : ''}`}
           >
-            <span>All Categories</span>
+            All Products
           </button>
           {categories.map((cat) => (
             <button
               key={cat.id}
               onClick={() => setActiveCategory(cat.id)}
-              className={`category-pill ${
-                activeCategory === cat.id ? 'active' : ''
-              }`}
+              className={`category-pill ${activeCategory === cat.id ? 'active' : ''}`}
             >
-              <span>{cat.name}</span>
+              {cat.name}
             </button>
           ))}
         </div>
       )}
 
-      {/* Control Bar: Counts, In-Stock Filter & Sorting */}
-      <div className="feed-controls-bar">
-        <div className="feed-title-meta">
-          <h2>
-            {activeCategory
-              ? `${
-                  categories.find((c) => c.id === activeCategory)?.name ||
-                  'Category'
-                } Catalog`
-              : search
-              ? `Results for "${search}"`
-              : 'Featured Marketplace'}
-          </h2>
-          <span className="feed-count-badge">
-            {filteredAndSortedProducts.length} items available
-          </span>
-        </div>
-
-        <div className="feed-actions">
-          {/* In Stock Switch */}
-          <label className="toggle-switch-label">
-            <input
-              type="checkbox"
-              checked={inStockOnly}
-              onChange={(e) => setInStockOnly(e.target.checked)}
-              className="toggle-checkbox"
-            />
-            <span className="toggle-track">
-              <span className="toggle-thumb" />
-            </span>
-            <span className="toggle-text">In Stock Only</span>
-          </label>
-
-          {/* Sort Dropdown */}
-          <div className="sort-wrapper">
-            <ArrowUpDown size={15} className="sort-icon" />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="sort-select"
-            >
-              <option value="featured">Sort by: Featured</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="name">Product Name (A-Z)</option>
-            </select>
-          </div>
-        </div>
+      {/* Main Feed Content */}
+      <div className="feed-header">
+        <h2>
+          {activeCategory
+            ? `${categories.find((c) => c.id === activeCategory)?.name || 'Filtered'} Products`
+            : search
+            ? `Search results for "${search}"`
+            : 'All Marketplace Listings'}
+        </h2>
+        <span className="feed-count">{products.length} items found</span>
       </div>
 
       {loading ? (
-        <div className="product-grid">
-          {[1, 2, 3, 4].map((n) => (
-            <div key={n} className="skeleton-card">
-              <div className="skeleton-image" />
-              <div className="skeleton-line title" />
-              <div className="skeleton-line desc" />
-              <div className="skeleton-line price" />
-            </div>
-          ))}
+        <div className="flex-center feed-loading">
+          <div className="spinner"></div>
+          <p>Loading products...</p>
         </div>
       ) : error ? (
         <div className="alert alert-error">
@@ -237,31 +126,26 @@ const Home = () => {
             Retry
           </button>
         </div>
-      ) : filteredAndSortedProducts.length === 0 ? (
+      ) : products.length === 0 ? (
         <div className="empty-state">
           <PackageX size={48} className="empty-icon" />
-          <h3>No matching products</h3>
-          <p>
-            {inStockOnly
-              ? 'There are no currently in-stock products matching your filters.'
-              : 'Try searching with different keywords or switching category filters.'}
-          </p>
-          {(search || activeCategory || inStockOnly) && (
+          <h3>No products found</h3>
+          <p>Try refining your search terms or clearing the category filter.</p>
+          {(search || activeCategory) && (
             <button
               onClick={() => {
                 setSearch('');
                 setActiveCategory('');
-                setInStockOnly(false);
               }}
-              className="btn btn-primary btn-sm"
+              className="btn btn-secondary"
             >
-              Reset Filters
+              Clear Filters
             </button>
           )}
         </div>
       ) : (
         <div className="product-grid">
-          {filteredAndSortedProducts.map((product) => (
+          {products.map((product) => (
             <ProductCard key={product._id} product={product} />
           ))}
         </div>
@@ -271,3 +155,4 @@ const Home = () => {
 };
 
 export default Home;
+

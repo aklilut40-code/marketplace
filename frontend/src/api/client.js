@@ -41,8 +41,11 @@ export const resolveImageUrl = (imagePath) => {
     return imagePath;
   }
 
-  const backendBase = (
-    import.meta.env.VITE_API_URL || 'http://localhost:5000'
+   const backendBase = (
+    import.meta.env.VITE_API_URL ||
+    (import.meta.env.PROD
+      ? 'https://marketplace-backend-1szo.onrender.com'
+      : 'http://localhost:5000')
   ).replace(/\/api\/?$/, '').replace(/\/+$/, '');
 
   const cleanPath = imagePath.replace(/^\/+/, '');

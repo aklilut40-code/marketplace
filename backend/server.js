@@ -22,8 +22,38 @@ const userRoutes = require("./routes/userRoutes");
 const app = express();
 
 // --- Core middleware ---
-app.use(cors());
-app.use(express.json());
+// CORS: allow common local dev origins by default, and allow overriding via CLIENT_URLS env var
+const defaultOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://marketplace-frontend-cm21.onrender.com",
+];
+
+const allowedOrigins = (process.env.CLIENT_URLS && process.env.CLIENT_URLS.trim() !== ""
+  ? process.env.CLIENT_URLS
+  : defaultOrigins.join(",")
+)
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(
+  express.json()
+);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // allow requests with no origin (curl, mobile apps, server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error("CORS policy: origin not allowed"), false);
+    },
+    credentials: true,
+  })
+);
 
 // --- Static file serving for uploads ---
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));

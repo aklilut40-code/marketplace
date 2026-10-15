@@ -16,6 +16,7 @@ to Antigravity AI.
 ### MongoDB — pick one
 
 **Option A: MongoDB Atlas (recommended)**
+
 1. Sign up at [mongodb.com/atlas](https://www.mongodb.com/atlas).
 2. Create a free-tier cluster.
 3. Under **Database Access**, create a user with a password.
@@ -29,6 +30,7 @@ to Antigravity AI.
 No local service to run; works from any network with internet access.
 
 **Option B: Local MongoDB**
+
 - Mac: `brew install mongodb-community`
 - Windows: download the MSI installer from [mongodb.com](https://www.mongodb.com/try/download/community)
 - Start it with `mongod` (or as a background service) before running the backend.
@@ -75,3 +77,50 @@ Then:
 cd backend && npm install && npm run dev
 cd frontend && npm install && npm run dev
 ```
+
+---
+
+## Recent changes (applied 2026-10-15)
+These are the repository updates applied while debugging the deployed frontend/backend setup. They document what was changed and why — follow the verification steps below after deploying.
+
+1) Frontend: use VITE_API_URL at build time for API base
+- File: `frontend/src/api/client.js`
+- Change: Axios client now uses the environment variable `VITE_API_URL` (when present) as the backend origin and falls back to the dev proxy (`/api`) for local development.
+- Purpose: Allows the built frontend to call the Render backend (or any other origin) by setting `VITE_API_URL` at build time.
+- Verification: After building the frontend, requests should go to `${VITE_API_URL}/api/...` (or `/api/...` when running locally with Vite dev server).
+
+2) Frontend: dev proxy reads VITE_API_URL (optional)
+- File: `frontend/vite.config.js`
+- Change: Dev proxy target now prefers `VITE_API_URL` if present, else falls back to `http://localhost:5000`.
+- Purpose: Lets local dev use a custom backend origin without editing code.
+
+3) Frontend: document env example
+- File: `frontend/.env.example`
+- Change: Added `VITE_API_URL=https://marketplace-backend-1szo.onrender.com` as an example.
+- Purpose: Shows the recommended production backend origin for this project.
+
+4) Backend: optional, configurable CORS origins
+- File: `backend/server.js`
+- Change: Replaced the permissive `app.use(cors())` with a configurable CORS setup that:
+  - Accepts a `CLIENT_URLS` environment variable (comma-separated list) to whitelist origins.
+  - Falls back to a sensible default list that includes local dev origins and the Render frontend URL (`https://marketplace-frontend-cm21.onrender.com`).
+- Purpose: Make cross-origin requests optional and explicit so the API can be called from deployed frontends while remaining friendly for local dev.
+- Env var example: `CLIENT_URLS=https://marketplace-frontend-cm21.onrender.com,http://localhost:5173`
+
+## Deployment notes
+- Frontend (Render or Netlify): set `VITE_API_URL` to the backend origin *before* building the frontend. Example:
+  - `VITE_API_URL=https://marketplace-backend-1szo.onrender.com`
+  - On Render: add this in the frontend service Environment variables and redeploy the frontend.
+  - On Netlify: add the same env var in Site settings → Build & deploy → Environment.
+
+- Backend (Render): if you change `CLIENT_URLS`, redeploy/restart the backend so the new CORS settings take effect.
+
+## Quick verification checklist
+1. Backend reachable directly (should return JSON):
+   `curl https://marketplace-backend-1szo.onrender.com/api/products`
+2. Set `VITE_API_URL` on the frontend host (Render/Netlify) and redeploy the frontend.
+3. Open the frontend site and check DevTools → Network. The product fetch should go to:
+   `https://marketplace-backend-1szo.onrender.com/api/products`
+4. If you see a CORS error, add the exact origin shown in the console to `CLIENT_URLS` and redeploy the backend.
+
+If you want, I can append a short section to the frontend and backend README files summarizing the same changes and the exact env vars to set — say so and I will update those files as well.

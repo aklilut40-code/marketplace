@@ -49,6 +49,13 @@ React Frontend ← HTTP Response ← Express Server ← Error Middleware ← Con
    NODE_ENV=development
    ```
 
+   Optional environment variable for deployed frontend origins (CORS):
+   ```env
+   CLIENT_URLS=https://marketplace-frontend-cm21.onrender.com,https://<your-netlify-site>.netlify.app,http://localhost:5173
+   ```
+
+   Important: `.env.example` is only a template for local development and documentation. It is not read by Render automatically. For deployed services, set `CLIENT_URLS` in the Render dashboard under the backend service Environment Variables and redeploy.
+
 4. Seed the Database with Demo Data:
    ```bash
    npm run seed
@@ -119,4 +126,14 @@ React Frontend ← HTTP Response ← Express Server ← Error Middleware ← Con
 ## File Uploads & Static Assets
 - Uploaded files are stored in `backend/uploads/` via Multer.
 - Images are served statically from `http://localhost:5000/uploads/<filename>`.
+
+## CORS and deployed frontends
+When the frontend is hosted on a different origin (for example Render or Netlify), browser requests need the backend to allow that origin.
+
+- Set `CLIENT_URLS` in the backend service environment on Render.
+- Example value:
+  ```env
+  CLIENT_URLS=https://marketplace-frontend-cm21.onrender.com,https://<your-netlify-site>.netlify.app,http://localhost:5173
+  ```
+- If `CLIENT_URLS` is not set, the app falls back to a safe default list. This keeps local development working while allowing known deployed frontends.
 

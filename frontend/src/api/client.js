@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const backendOrigin = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const apiBase = backendOrigin ? `${backendOrigin}/api` : '/api';
+
 const client = axios.create({
-  baseURL: '/api',
+  baseURL: apiBase,
 });
 
 // Automatically attach JWT token from localStorage to every request
@@ -41,7 +44,7 @@ export const resolveImageUrl = (imagePath) => {
     return imagePath;
   }
 
-   const backendBase = (
+  const backendBase = (
     import.meta.env.VITE_API_URL ||
     (import.meta.env.PROD
       ? 'https://marketplace-backend-1szo.onrender.com'
@@ -56,4 +59,3 @@ export const resolveImageUrl = (imagePath) => {
 };
 
 export default client;
-

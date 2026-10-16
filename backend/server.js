@@ -67,6 +67,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/users", userRoutes);
 
 // --- Error handling (must come after routes) ---
+app.get("/api/health", (req, res) => { res.json({ status: "ok", uptime_seconds: Math.floor(process.uptime()), commit: process.env.COMMIT_SHA || null, timestamp: new Date().toISOString() }); });
 app.use(notFound);
 app.use(errorHandler);
 
